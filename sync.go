@@ -52,7 +52,13 @@ func sync(source, destination string) error {
 			fmt.Println(err)
 		}
 	}()
-	deleteDoneC := deleteWorkers(errorC)
+	deleteDoneC := workers(numberOfWorker, deleteChan, errorC, func(path string) error {
+		err := os.Remove(path)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 
 	err = walk(destination, "", func(filePath string) {
 		fmt.Println(filePath)
@@ -62,9 +68,8 @@ func sync(source, destination string) error {
 			deleteChan <- path.Join(destination, filePath)
 		}
 	}, func(directoryPath string) {
-		if directoryToDelete[directoryPath] {
-			//deleteChan <- path.Join(destination, directoryPath)
-			delete(directoryToDelete, directoryPath)
+		if !directoryToDelete[directoryPath] {
+			deleteChan <- path.Join(destination, directoryPath)
 		}
 	})
 
@@ -74,36 +79,7 @@ func sync(source, destination string) error {
 		return err
 	}
 
-	var wg2 sync2.WaitGroup
-	for i := 0; i < numberOfWorker; i++ {
-		wg2.Add(1)
-		go func() {
-			defer wg2.Done()
-			for file := range copyChan {
-				src, err := os.Open(path.Join(source, file))
-				if err != nil {
-					fmt.Println(err)
-				}
-				defer src.Close()
-
-				destinationFile := path.Join(destination, file)
-				dir := filepath.Dir(destinationFile)
-				_, err = os.Stat(dir)
-				if os.IsNotExist(err) {
-					os.MkdirAll(dir, os.ModePerm)
-				}
-				destination, err := os.Create(destinationFile)
-				if err != nil {
-					fmt.Println(err)
-				}
-				defer destination.Close()
-				_, err = io.Copy(destination, src)
-				if err != nil {
-					fmt.Println(err)
-				}
-			}
-		}()
-	}
+	copyDoneC := workers(numberOfWorker, copyChan, errorC, copyFile(source, destination))
 
 	for k := range fileToSync {
 		copyChan <- k
@@ -111,7 +87,7 @@ func sync(source, destination string) error {
 	close(copyChan)
 
 	<-deleteDoneC
-	wg2.Wait()
+	<-copyDoneC
 
 	return nil
 }
@@ -134,9 +110,26 @@ func walk(dir, subDir string, fileFn func(path string), directoryFn func(path st
 	return nil
 }
 
-func deleteWorkers(chan<- error) <-chan bool {
+func deleteWorkers(errorC chan<- error) <-chan bool {
 	doneC := make(chan bool, 0)
-	errorC := make(chan error, 0)
+	for i := 0; i < numberOfWorker; i++ {
+		go func() {
+			for file := range deleteChan {
+				err := os.RemoveAll(file)
+				if err != nil {
+					errorC <- err
+				}
+			}
+
+			doneC <- true
+		}()
+	}
+
+	return doneC
+}
+
+func copyWorkers(errorC chan<- error) <-chan bool {
+	doneC := make(chan bool, 0)
 	for i := 0; i < numberOfWorker; i++ {
 		go func() {
 			for file := range deleteChan {
@@ -151,4 +144,65 @@ func deleteWorkers(chan<- error) <-chan bool {
 	}
 
 	return doneC
+}
+
+func workers(numberOfWorker int, inputChan <-chan string, errorC chan<- error, fn func(path string) error) <-chan bool {
+	doneC := make(chan bool, 0)
+	wg := sync2.WaitGroup{}
+	for i := 0; i < numberOfWorker; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for p := range inputChan {
+				err := fn(p)
+				if err != nil {
+					errorC <- err
+				}
+			}
+		}()
+	}
+	go func() {
+		wg.Wait()
+		doneC <- true
+	}()
+
+	return doneC
+}
+
+func copyFile(source, destination string) func(filePath string) error {
+	return func(filePath string) error {
+		fmt.Printf("copy %s %s to %s\n", filePath, source, destination)
+		src, err := os.Open(path.Join(source, filePath))
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+
+		destinationFile := path.Join(destination, filePath)
+		dir := filepath.Dir(destinationFile)
+		_, err = os.Stat(dir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				err = os.MkdirAll(dir, os.ModePerm)
+				if err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+
+		}
+
+		destination, err := os.Create(destinationFile)
+		if err != nil {
+			return err
+		}
+		defer destination.Close()
+		_, err = io.Copy(destination, src)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
 }

@@ -13,7 +13,7 @@ const bufferSize = 10
 const numberOfWorker = 10
 
 var deleteChan = make(chan string, bufferSize)
-var copyChan = make(chan string, bufferSize)
+var copyChan = make(chan string)
 
 func main() {
 	var source, destination string
