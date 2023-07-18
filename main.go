@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -33,9 +32,5 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
-	}
-
-	if source == destination {
-		log.Fatal("source and dest are the same")
 	}
 }

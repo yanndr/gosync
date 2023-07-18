@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,7 +24,7 @@ func isAValidDirectory(path string) error {
 
 func sync(source, destination string) error {
 
-	var fileToSync = make(map[string]bool)
+	var filesToSync = make(map[string]os.FileMode)
 	var directoryToDelete = make(map[string]bool)
 
 	if err := isAValidDirectory(source); err != nil {
@@ -34,11 +35,23 @@ func sync(source, destination string) error {
 		return err
 	}
 
-	err := walk(source, "", func(filePath string) {
-		fmt.Println(filePath)
-		fileToSync[filePath] = true
+	if source == destination {
+		return fmt.Errorf("error source and dest are the same directory")
+	}
+
+	errorC := make(chan error)
+
+	errors := false
+	go func() {
+		for err := range errorC {
+			errors = true
+			log.Println(err)
+		}
+	}()
+
+	err := walk(source, "", func(filePath string, fileMode os.FileMode) {
+		filesToSync[filePath] = fileMode
 	}, func(path string) {
-		fmt.Println(path)
 		directoryToDelete[path] = true
 	})
 
@@ -46,12 +59,6 @@ func sync(source, destination string) error {
 		return err
 	}
 
-	errorC := make(chan error)
-	go func() {
-		for err := range errorC {
-			fmt.Println(err)
-		}
-	}()
 	deleteDoneC := workers(numberOfWorker, deleteChan, errorC, func(path string) error {
 		err := os.Remove(path)
 		if err != nil {
@@ -60,10 +67,9 @@ func sync(source, destination string) error {
 		return nil
 	})
 
-	err = walk(destination, "", func(filePath string) {
-		fmt.Println(filePath)
-		if fileToSync[filePath] {
-			delete(fileToSync, filePath)
+	err = walk(destination, "", func(filePath string, _ os.FileMode) {
+		if _, ok := filesToSync[filePath]; ok {
+			delete(filesToSync, filePath)
 		} else {
 			deleteChan <- path.Join(destination, filePath)
 		}
@@ -79,9 +85,9 @@ func sync(source, destination string) error {
 		return err
 	}
 
-	copyDoneC := workers(numberOfWorker, copyChan, errorC, copyFile(source, destination))
+	copyDoneC := workers(numberOfWorker, copyChan, errorC, copyFileFn(source, destination, filesToSync))
 
-	for k := range fileToSync {
+	for k := range filesToSync {
 		copyChan <- k
 	}
 	close(copyChan)
@@ -89,61 +95,38 @@ func sync(source, destination string) error {
 	<-deleteDoneC
 	<-copyDoneC
 
+	if errors {
+		return fmt.Errorf("operation complete with errors")
+	}
 	return nil
 }
 
-func walk(dir, subDir string, fileFn func(path string), directoryFn func(path string)) error {
-	entries, err := os.ReadDir(dir)
+func walk(baseDir, subDir string, fileFn func(path string, fileMode os.FileMode), directoryFn func(path string)) error {
+	workingDir := path.Join(baseDir, subDir)
+	entries, err := os.ReadDir(workingDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("error listing files in directory %s: %w", workingDir, err)
 	}
 
 	for _, e := range entries {
 		if e.IsDir() {
 			directoryFn(path.Join(subDir, e.Name()))
-			err = walk(path.Join(dir, e.Name()), e.Name(), fileFn, directoryFn)
+
+			err = walk(baseDir, path.Join(subDir, e.Name()), fileFn, directoryFn)
+			if err != nil {
+				return fmt.Errorf("error scannig directory, %s: %w", workingDir, err)
+			}
 		} else {
-			fileFn(path.Join(subDir, e.Name()))
+			file := path.Join(workingDir, e.Name())
+			st, err := os.Stat(file)
+			if err != nil {
+				return fmt.Errorf("error getting stat for file %s: %w", file, err)
+			}
+			fileFn(path.Join(subDir, e.Name()), st.Mode())
 		}
 	}
 
 	return nil
-}
-
-func deleteWorkers(errorC chan<- error) <-chan bool {
-	doneC := make(chan bool, 0)
-	for i := 0; i < numberOfWorker; i++ {
-		go func() {
-			for file := range deleteChan {
-				err := os.RemoveAll(file)
-				if err != nil {
-					errorC <- err
-				}
-			}
-
-			doneC <- true
-		}()
-	}
-
-	return doneC
-}
-
-func copyWorkers(errorC chan<- error) <-chan bool {
-	doneC := make(chan bool, 0)
-	for i := 0; i < numberOfWorker; i++ {
-		go func() {
-			for file := range deleteChan {
-				err := os.Remove(file)
-				if err != nil {
-					errorC <- err
-				}
-			}
-
-			doneC <- true
-		}()
-	}
-
-	return doneC
 }
 
 func workers(numberOfWorker int, inputChan <-chan string, errorC chan<- error, fn func(path string) error) <-chan bool {
@@ -169,40 +152,47 @@ func workers(numberOfWorker int, inputChan <-chan string, errorC chan<- error, f
 	return doneC
 }
 
-func copyFile(source, destination string) func(filePath string) error {
+func copyFileFn(sourceDir, destinationDir string, fileToSync map[string]os.FileMode) func(filePath string) error {
 	return func(filePath string) error {
-		fmt.Printf("copy %s %s to %s\n", filePath, source, destination)
-		src, err := os.Open(path.Join(source, filePath))
-		if err != nil {
-			return err
-		}
-		defer src.Close()
-
-		destinationFile := path.Join(destination, filePath)
-		dir := filepath.Dir(destinationFile)
-		_, err = os.Stat(dir)
-		if err != nil {
-			if os.IsNotExist(err) {
-				err = os.MkdirAll(dir, os.ModePerm)
-				if err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-
-		}
-
-		destination, err := os.Create(destinationFile)
-		if err != nil {
-			return err
-		}
-		defer destination.Close()
-		_, err = io.Copy(destination, src)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return copyFile(sourceDir, destinationDir, filePath, fileToSync[filePath])
 	}
+}
+
+func copyFile(sourceDir, destinationDir, filePath string, fileMode os.FileMode) error {
+	sourceFile := path.Join(sourceDir, filePath)
+	src, err := os.Open(sourceFile)
+	if err != nil {
+		return fmt.Errorf("error reading source file %s: %w", sourceFile, err)
+	}
+	defer src.Close()
+
+	destinationFile := path.Join(destinationDir, filePath)
+	dir := filepath.Dir(destinationFile)
+
+	_, err = os.Stat(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			srcDir := filepath.Dir(sourceFile)
+			dirStat, err := os.Stat(srcDir)
+			err = os.MkdirAll(dir, dirStat.Mode())
+			if err != nil {
+				return fmt.Errorf("error creating directory %s: %w", dir, err)
+			}
+		} else {
+			return fmt.Errorf("error getting stat for directory %s: %w", dir, err)
+		}
+	}
+
+	destination, err := os.OpenFile(destinationFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fileMode)
+	if err != nil {
+		return fmt.Errorf("error creating file %s: %w", destinationFile, err)
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, src)
+	if err != nil {
+		return fmt.Errorf("error copying file %s to %s: %w", sourceFile, destinationFile, err)
+	}
+
+	return nil
 }
