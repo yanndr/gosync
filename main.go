@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 )
 
 var Version = "0.1.dev"
@@ -34,8 +35,14 @@ func main() {
 	//	os.Exit(-1)
 	//}
 
+	now := time.Now()
+
+	defer func() {
+		fmt.Println(time.Since(now))
+	}()
+
 	ds := DirectorySync{source: source, destination: destination}
-	err := ds.Sync()
+	err := ds.Sync(40)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
