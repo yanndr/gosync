@@ -1,3 +1,3 @@
-module yanndr.sync
+module gosync
 
 go 1.20

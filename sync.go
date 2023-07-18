@@ -7,7 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	sync2 "sync"
+	"sync"
 )
 
 func isAValidDirectory(path string) error {
@@ -22,7 +22,7 @@ func isAValidDirectory(path string) error {
 	return nil
 }
 
-func sync(source, destination string) error {
+func synchronize(source, destination string) error {
 
 	var filesToSync = make(map[string]os.FileMode)
 	var directoryToDelete = make(map[string]bool)
@@ -131,7 +131,7 @@ func walk(baseDir, subDir string, fileFn func(path string, fileMode os.FileMode)
 
 func workers(numberOfWorker int, inputChan <-chan string, errorC chan<- error, fn func(path string) error) <-chan bool {
 	doneC := make(chan bool, 0)
-	wg := sync2.WaitGroup{}
+	wg := sync.WaitGroup{}
 	for i := 0; i < numberOfWorker; i++ {
 		wg.Add(1)
 		go func() {
@@ -195,4 +195,110 @@ func copyFile(sourceDir, destinationDir, filePath string, fileMode os.FileMode) 
 	}
 
 	return nil
+}
+
+//type FolderSynchronizer struct {
+//	sourceFolder, destinationFolder string
+//	copyChanel                      chan file
+//}
+
+func syncFolders(sourceFolder, destinationFolder string) error {
+
+	err := deleteNonExistingFolder(sourceFolder, destinationFolder)
+	if err != nil {
+		return err
+	}
+
+	return copyingNewfiles(sourceFolder, destinationFolder)
+}
+
+func copyingNewfiles(sourceFolder string, destinationFolder string) error {
+	err := filepath.Walk(sourceFolder, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relativePath, err := filepath.Rel(sourceFolder, path)
+		if err != nil {
+			return err
+		}
+		destPath := filepath.Join(destinationFolder, relativePath)
+		if info.IsDir() {
+			err := os.MkdirAll(destPath, info.Mode())
+			if err != nil {
+				return err
+			}
+		} else {
+			destInfo, err := os.Stat(destPath)
+			if os.IsNotExist(err) || destInfo.IsDir() {
+				err = copyF(path, destPath)
+				if err != nil {
+					return err
+				}
+				fmt.Println("Copied:", path)
+			}
+		}
+		return nil
+	})
+
+	return err
+}
+
+func deleteNonExistingFolder(sourceFolder string, destinationFolder string) error {
+	err := filepath.Walk(destinationFolder, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relativePath, err := filepath.Rel(destinationFolder, path)
+		if err != nil {
+			return err
+		}
+		sourcePath := filepath.Join(sourceFolder, relativePath)
+		if !fileExists(sourcePath) {
+			if info.IsDir() {
+				err := os.RemoveAll(path)
+				if err != nil {
+					return err
+				}
+				fmt.Println("Deleted folder:", path)
+			} else {
+				err := os.Remove(path)
+				if err != nil {
+					return err
+				}
+				fmt.Println("Deleted file:", path)
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func copyF(sourcePath, destPath string) error {
+	source, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	dest, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer dest.Close()
+
+	_, err = io.Copy(dest, source)
+	if err != nil {
+		return err
+	}
+
+	return dest.Sync()
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }

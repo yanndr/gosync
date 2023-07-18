@@ -28,7 +28,14 @@ func main() {
 
 	flag.Parse()
 
-	err := sync(source, destination)
+	//err := synchronize(source, destination)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	os.Exit(-1)
+	//}
+
+	ds := DirectorySync{source: source, destination: destination}
+	err := ds.Sync()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
