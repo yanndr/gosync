@@ -12,6 +12,13 @@ import (
 	"sync"
 )
 
+type entryType bool
+
+const (
+	folder = entryType(true)
+	file   = entryType(false)
+)
+
 type File struct {
 	source, destination string
 	fileMode            os.FileMode
@@ -136,7 +143,7 @@ func (d *DirectorySynchronizer) synchronizeFolder() error {
 				continue
 			}
 
-			if isDir != entry.IsDir() {
+			if isDir != entryType(entry.IsDir()) {
 				err = os.RemoveAll(path.Join(folders.destination, entry.Name()))
 				if err != nil {
 					return fmt.Errorf("cannot delete entry %s: %w", entry.Name(), err)
@@ -164,8 +171,8 @@ func (d *DirectorySynchronizer) synchronizeFolder() error {
 }
 
 // listExistingEntries list all the entries in the folderPath and returns a map[string]bool of the entries
-func listExistingEntries(folderPath string) (map[string]bool, error) {
-	existingEntries := make(map[string]bool)
+func listExistingEntries(folderPath string) (map[string]entryType, error) {
+	existingEntries := make(map[string]entryType)
 	destEntries, err := os.ReadDir(folderPath)
 	if err != nil {
 		var pathErr *fs.PathError
@@ -174,10 +181,14 @@ func listExistingEntries(folderPath string) (map[string]bool, error) {
 		}
 	} else {
 		for _, entry := range destEntries {
-			existingEntries[entry.Name()] = entry.IsDir()
+			existingEntries[entry.Name()] = entryType(entry.IsDir())
 		}
 	}
 	return existingEntries, nil
+}
+
+type fileCopier interface {
+	copyFile(sourceFile, destinationFile string) error
 }
 
 // copyFile copy a sourceFile to the destinationFile, if the parent folder doesn't exist it will be created

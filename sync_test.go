@@ -83,15 +83,12 @@ func Test_listExistingEntries(t *testing.T) {
 	tests := []struct {
 		name       string
 		folderPath string
-		want       map[string]bool
+		want       map[string]entryType
 		wantErr    bool
 	}{
-		{
-			name:       "",
-			folderPath: "",
-			want:       nil,
-			wantErr:    false,
-		},
+		{"Empty path", "", map[string]entryType{}, false},
+		{"folder a path", "./tests/source_folder_a", map[string]entryType{"file_a": file, "file_b": file, "file_c": file}, false},
+		{"folder c path", "./tests/source_folder_c", map[string]entryType{"dir_a": folder, "file_a": file, "file_d": file, "file_e": file}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -102,6 +99,51 @@ func Test_listExistingEntries(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("listExistingEntries() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDirectorySynchronizer_Sync(t *testing.T) {
+	const dest = "./tests/testdest"
+	defer os.RemoveAll(dest)
+
+	type fields struct {
+		Source       string
+		Destination  string
+		copyC        chan File
+		deleteC      chan string
+		maxGoroutine int
+		copyBuffer   int
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr bool
+	}{
+		{
+			name: "same source and destination",
+			fields: fields{
+				Source:       dest,
+				Destination:  dest,
+				maxGoroutine: 1,
+				copyBuffer:   1,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &DirectorySynchronizer{
+				Source:       tt.fields.Source,
+				Destination:  tt.fields.Destination,
+				copyC:        tt.fields.copyC,
+				deleteC:      tt.fields.deleteC,
+				maxGoroutine: tt.fields.maxGoroutine,
+				copyBuffer:   tt.fields.copyBuffer,
+			}
+			if err := d.Sync(); (err != nil) != tt.wantErr {
+				t.Errorf("Sync() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
