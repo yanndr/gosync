@@ -16,7 +16,7 @@ const (
 var defaultOptions = synchronizerOption{
 	maxGoroutine:   defaultMaxGoroutine,
 	copyBufferSize: defaultCopyBufferSize,
-	fileCopier:     syncFile.BasicCopy{},
+	fileCopier:     &syncFile.BasicCopy{},
 }
 
 type SynchronizerOption interface {

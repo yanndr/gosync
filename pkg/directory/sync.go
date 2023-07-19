@@ -13,7 +13,9 @@ type File struct {
 	fileMode            os.FileMode
 }
 
+// Synchronizer
 type Synchronizer interface {
+	//Sync launch the synching operation between the two folders
 	Sync() error
 }
 
@@ -24,6 +26,7 @@ type synchronizer struct {
 	options             synchronizerOption
 }
 
+// NewSynchronizer
 func NewSynchronizer(source, destination string, opts ...SynchronizerOption) Synchronizer {
 	options := defaultOptions
 	if opts != nil {

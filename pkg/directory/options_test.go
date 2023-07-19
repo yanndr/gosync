@@ -48,13 +48,6 @@ func Test_maxGoroutine(t *testing.T) {
 	}
 }
 
-type fakeCopier struct {
-}
-
-func (fakeCopier) Copy(source, destination string) error {
-	return nil
-}
-
 func Test_fileCopier(t *testing.T) {
 	options := defaultOptions
 	fk := &fakeCopier{}

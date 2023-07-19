@@ -14,7 +14,7 @@ type Copier interface {
 
 type BasicCopy struct{}
 
-func (BasicCopy) Copy(sourceFile, destinationFile string) error {
+func (*BasicCopy) Copy(sourceFile, destinationFile string) error {
 	source, err := os.Open(sourceFile)
 	if err != nil {
 		return fmt.Errorf("cannot open Source file %s: %w", sourceFile, err)
