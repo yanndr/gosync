@@ -3,18 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gosync"
+	"gosync/pkg/directory"
 	"os"
 	"time"
 )
 
 var Version = "0.1.dev"
-
-const bufferSize = 10
-const numberOfWorker = 10
-
-var deleteChan = make(chan string, bufferSize)
-var copyChan = make(chan string)
 
 func main() {
 	var source, destination string
@@ -41,7 +35,8 @@ func main() {
 		fmt.Println(time.Since(now))
 	}()
 
-	ds := gosync.DirectorySynchronizer{Source: source, Destination: destination}
+	ds := directory.NewSynchronizer(source, destination, directory.MaxGoroutine(40))
+
 	err := ds.Sync()
 	if err != nil {
 		fmt.Println(err)
