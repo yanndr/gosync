@@ -5,7 +5,7 @@ import (
 )
 
 func Test_copyBufferSize(t *testing.T) {
-	options := defaultOptions
+	s := defaultSynchronizer
 
 	tests := []struct {
 		name string
@@ -18,16 +18,16 @@ func Test_copyBufferSize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			CopyBufferSize(tt.size).apply(&options)
-			if options.copyBufferSize != tt.want {
-				t.Errorf("CopyBufferSize() = %v, want %v", options.copyBufferSize, tt.want)
+			CopyBufferSize(tt.size).apply(&s)
+			if s.copyBufferSize != tt.want {
+				t.Errorf("CopyBufferSize() = %v, want %v", s.copyBufferSize, tt.want)
 			}
 		})
 	}
 }
 
 func Test_maxGoroutine(t *testing.T) {
-	options := defaultOptions
+	s := defaultSynchronizer
 
 	tests := []struct {
 		name string
@@ -40,20 +40,20 @@ func Test_maxGoroutine(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			MaxGoroutine(tt.max).apply(&options)
-			if options.maxGoroutine != tt.want {
-				t.Errorf("maxGoroutine() = %v, want %v", options.maxGoroutine, tt.want)
+			MaxGoroutine(tt.max).apply(&s)
+			if s.maxGoroutine != tt.want {
+				t.Errorf("maxGoroutine() = %v, want %v", s.maxGoroutine, tt.want)
 			}
 		})
 	}
 }
 
 func Test_fileCopier(t *testing.T) {
-	options := defaultOptions
+	s := defaultSynchronizer
 	fk := &fakeCopier{}
-	FileCopier(fk).apply(&options)
-	if options.fileCopier != fk {
-		t.Errorf("fileCopier() = %v, want %v", options.fileCopier, fk)
+	fileCopier(fk).apply(&s)
+	if s.fileCopier != fk {
+		t.Errorf("fileCopier() = %v, want %v", s.fileCopier, fk)
 	}
 
 }

@@ -2,6 +2,7 @@ package directory
 
 import (
 	"fmt"
+	syncFile "gosync/pkg/file"
 	"log"
 	"os"
 	"path"
@@ -22,26 +23,25 @@ type Synchronizer interface {
 type synchronizer struct {
 	Source, Destination string
 	copyC               chan fileSync
-	deleteC             chan string
-	options             synchronizerOption
+	maxGoroutine        int
+	copyBufferSize      int
+	fileCopier          syncFile.Copier
+	entryLister         dirEntryLister
 }
 
-// NewSynchronizer
+// NewSynchronizer initialize a directory synchronizer
 func NewSynchronizer(source, destination string, opts ...SynchronizerOption) Synchronizer {
-	options := defaultOptions
+	s := defaultSynchronizer
 	if opts != nil {
 		for _, opt := range opts {
-			opt.apply(&options)
+			opt.apply(&s)
 		}
 	}
-	s := &synchronizer{
-		Source:      source,
-		Destination: destination,
-		options:     options,
-		copyC:       make(chan fileSync, options.copyBufferSize),
-	}
+	s.Source = source
+	s.Destination = destination
+	s.copyC = make(chan fileSync, s.copyBufferSize)
 
-	return s
+	return &s
 }
 
 func (s *synchronizer) Sync() error {
@@ -53,7 +53,7 @@ func (s *synchronizer) Sync() error {
 		return fmt.Errorf("error Source and Destination are the same directory")
 	}
 
-	doneC, errorC := s.copyListener(s.options.maxGoroutine)
+	doneC, errorC := s.copyListener(s.maxGoroutine)
 
 	errorOccurred := false
 	go func() {
@@ -91,7 +91,7 @@ func (s *synchronizer) copyListener(maxGoroutine int) (<-chan interface{}, <-cha
 					wg.Done()
 					<-semaphore
 				}()
-				err := s.options.fileCopier.Copy(fi.source, fi.destination)
+				err := s.fileCopier.Copy(fi.source, fi.destination)
 				if err != nil {
 					errorC <- err
 				}
@@ -120,7 +120,7 @@ func (s *synchronizer) synchronizeFolder() error {
 		folders := folderQueue[0]
 		folderQueue = folderQueue[1:]
 
-		existingEntries, err := ListExistingEntries(folders.destination)
+		existingEntries, err := s.entryLister.listEntries(folders.destination)
 		if err != nil {
 			return fmt.Errorf("cannot load entries from %s: %w", folders.destination, err)
 		}
@@ -150,7 +150,7 @@ func (s *synchronizer) synchronizeFolder() error {
 
 			if entry.IsDir() {
 				folderQueue = append(folderQueue, syncFolders{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())})
-			} else {
+			} else if isDir != EntryType(entry.IsDir()) {
 				s.copyC <- fileSync{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())}
 			}
 

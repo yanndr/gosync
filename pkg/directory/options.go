@@ -7,32 +7,27 @@ const (
 	defaultCopyBufferSize = 20
 )
 
-// SynchronizerOption sets options such as FileCopier, MaxGoroutine and CopyBufferSize
+// SynchronizerOption sets options such as fileCopier, MaxGoroutine and CopyBufferSize
 type SynchronizerOption interface {
-	apply(option *synchronizerOption)
+	apply(option *synchronizer)
 }
 
-type synchronizerOption struct {
-	maxGoroutine   int
-	copyBufferSize int
-	fileCopier     syncFile.Copier
-}
-
-var defaultOptions = synchronizerOption{
+var defaultSynchronizer = synchronizer{
 	maxGoroutine:   defaultMaxGoroutine,
 	copyBufferSize: defaultCopyBufferSize,
 	fileCopier:     &syncFile.BasicCopy{},
+	entryLister:    &basicDirEntryLister{},
 }
 
 type funcSynchronizerOption struct {
-	f func(*synchronizerOption)
+	f func(*synchronizer)
 }
 
-func (fo *funcSynchronizerOption) apply(so *synchronizerOption) {
-	fo.f(so)
+func (fo *funcSynchronizerOption) apply(s *synchronizer) {
+	fo.f(s)
 }
 
-func newFuncSynchronizerOption(f func(*synchronizerOption)) *funcSynchronizerOption {
+func newFuncSynchronizerOption(f func(*synchronizer)) *funcSynchronizerOption {
 	return &funcSynchronizerOption{
 		f: f,
 	}
@@ -40,26 +35,33 @@ func newFuncSynchronizerOption(f func(*synchronizerOption)) *funcSynchronizerOpt
 
 // MaxGoroutine lets you set the maximum goroutine that are allow for copying files.
 func MaxGoroutine(m int) SynchronizerOption {
-	return newFuncSynchronizerOption(func(o *synchronizerOption) {
+	return newFuncSynchronizerOption(func(s *synchronizer) {
 		if m > 0 {
-			o.maxGoroutine = m
+			s.maxGoroutine = m
 		}
 
 	})
 }
 
 // CopyBufferSize lets you set the copy channel buffer size.
-func CopyBufferSize(s int) SynchronizerOption {
-	return newFuncSynchronizerOption(func(o *synchronizerOption) {
-		if s > 0 {
-			o.copyBufferSize = s
+func CopyBufferSize(size int) SynchronizerOption {
+	return newFuncSynchronizerOption(func(s *synchronizer) {
+		if size > 0 {
+			s.copyBufferSize = size
 		}
 	})
 }
 
-// FileCopier lets you set up the syncFile.Copier, useful for testing purpose.
-func FileCopier(fc syncFile.Copier) SynchronizerOption {
-	return newFuncSynchronizerOption(func(o *synchronizerOption) {
-		o.fileCopier = fc
+// fileCopier lets you set up the syncFile.Copier for testing purpose.
+func fileCopier(fc syncFile.Copier) SynchronizerOption {
+	return newFuncSynchronizerOption(func(s *synchronizer) {
+		s.fileCopier = fc
+	})
+}
+
+// entryLister lets you set up the dirEntryLister for testing purpose.
+func entryLister(el dirEntryLister) SynchronizerOption {
+	return newFuncSynchronizerOption(func(o *synchronizer) {
+		o.entryLister = el
 	})
 }

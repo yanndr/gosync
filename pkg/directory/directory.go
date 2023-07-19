@@ -27,8 +27,20 @@ func IsValid(path string) error {
 	return nil
 }
 
-// ListExistingEntries list all the entries in the folderPath and returns a map[string]bool of the entries
-func ListExistingEntries(folderPath string) (map[string]EntryType, error) {
+type dirEntryLister interface {
+	// ListEntries list all the entries in the folderPath and returns a map[string]EntryType of the entries
+	listEntries(folderPath string) (map[string]EntryType, error)
+}
+
+type basicDirEntryLister struct {
+}
+
+func (basicDirEntryLister) listEntries(folderPath string) (map[string]EntryType, error) {
+	return ListEntries(folderPath)
+}
+
+// ListEntries list all the entries in the folderPath and returns a map[string]EntryType of the entries
+func ListEntries(folderPath string) (map[string]EntryType, error) {
 	existingEntries := make(map[string]EntryType)
 	destEntries, err := os.ReadDir(folderPath)
 	if err != nil {

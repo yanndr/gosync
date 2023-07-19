@@ -98,8 +98,76 @@ func Test_syncFolderBThenC(t *testing.T) {
 	}
 
 	if len(destEntries) != 4 {
+		t.Fatalf("expected 4 entries got %v entries", len(destEntries))
+	}
+	err = folderMustContains(dest, []string{dest, path.Join(dest, "dir_a"), path.Join(dest, "dir_a", "file_a_a"), path.Join(dest, "file_a"), path.Join(dest, "file_d"), path.Join(dest, "file_e")})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func Test_syncWithFolderNameLikeFiles(t *testing.T) {
+	//setup
+	defer os.RemoveAll(dest)
+	ds := directory.NewSynchronizer(sourceA, dest)
+
+	err := os.MkdirAll(filepath.Join(dest, "file_a"), os.ModePerm)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	//act
+	err = ds.Sync()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	//verify
+	destEntries, err := os.ReadDir(dest)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(destEntries) != 3 {
 		t.Fatalf("expected 3 entries got %v entries", len(destEntries))
 	}
+
+	err = folderMustContains(dest, []string{dest, path.Join(dest, "file_a"), path.Join(dest, "file_b"), path.Join(dest, "file_c")})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func Test_syncWithFileNameLikeFolder(t *testing.T) {
+	//setup
+	defer os.RemoveAll(dest)
+	ds := directory.NewSynchronizer(sourceC, dest)
+
+	err := os.Mkdir(dest, os.ModePerm)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_, err = os.Create(filepath.Join(dest, "dir_a"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	//act
+	err = ds.Sync()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	//verify
+	destEntries, err := os.ReadDir(dest)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(destEntries) != 4 {
+		t.Fatalf("expected 4 entries got %v entries", len(destEntries))
+	}
+
 	err = folderMustContains(dest, []string{dest, path.Join(dest, "dir_a"), path.Join(dest, "dir_a", "file_a_a"), path.Join(dest, "file_a"), path.Join(dest, "file_d"), path.Join(dest, "file_e")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
