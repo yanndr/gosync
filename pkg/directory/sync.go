@@ -8,20 +8,20 @@ import (
 	"sync"
 )
 
-type File struct {
+type fileSync struct {
 	source, destination string
 	fileMode            os.FileMode
 }
 
-// Synchronizer
+// Synchronizer is a directory synchronizer between a source and a destination folder.
 type Synchronizer interface {
-	//Sync launch the synching operation between the two folders
+	//Sync launch the syncing operation between the two folders
 	Sync() error
 }
 
 type synchronizer struct {
 	Source, Destination string
-	copyC               chan File
+	copyC               chan fileSync
 	deleteC             chan string
 	options             synchronizerOption
 }
@@ -38,7 +38,7 @@ func NewSynchronizer(source, destination string, opts ...SynchronizerOption) Syn
 		Source:      source,
 		Destination: destination,
 		options:     options,
-		copyC:       make(chan File, options.copyBufferSize),
+		copyC:       make(chan fileSync, options.copyBufferSize),
 	}
 
 	return s
@@ -86,7 +86,7 @@ func (s *synchronizer) copyListener(maxGoroutine int) (<-chan interface{}, <-cha
 		for f := range s.copyC {
 			wg.Add(1)
 			semaphore <- struct{}{}
-			go func(fi File) {
+			go func(fi fileSync) {
 				defer func() {
 					wg.Done()
 					<-semaphore
@@ -136,7 +136,7 @@ func (s *synchronizer) synchronizeFolder() error {
 				if entry.IsDir() {
 					folderQueue = append(folderQueue, syncFolders{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())})
 				} else {
-					s.copyC <- File{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())}
+					s.copyC <- fileSync{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())}
 				}
 				continue
 			}
@@ -151,7 +151,7 @@ func (s *synchronizer) synchronizeFolder() error {
 			if entry.IsDir() {
 				folderQueue = append(folderQueue, syncFolders{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())})
 			} else {
-				s.copyC <- File{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())}
+				s.copyC <- fileSync{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())}
 			}
 
 			delete(existingEntries, entry.Name())

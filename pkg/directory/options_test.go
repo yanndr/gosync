@@ -18,9 +18,9 @@ func Test_copyBufferSize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			copyBufferSize(tt.size).apply(&options)
+			CopyBufferSize(tt.size).apply(&options)
 			if options.copyBufferSize != tt.want {
-				t.Errorf("copyBufferSize() = %v, want %v", options.copyBufferSize, tt.want)
+				t.Errorf("CopyBufferSize() = %v, want %v", options.copyBufferSize, tt.want)
 			}
 		})
 	}
