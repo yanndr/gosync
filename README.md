@@ -15,10 +15,9 @@ this will build the binary in the root directory.
 
 If you don't have make:
 ```shell
-cd cmd/sync
-go build
+go build ./cmd/sync
 ```
-this will build the binary in cmd/sync
+this will build the binary in the root directory.
 
 ## Run
 
