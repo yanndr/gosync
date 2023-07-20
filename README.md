@@ -2,7 +2,7 @@
 
 ## Description
 Sync is a CLI to synchronize to directories, source and destination.
-
+If the destination folder doens't exist it will be created unless the source folder is empty
 ## Build
 
 if you have make install :

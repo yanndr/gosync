@@ -15,6 +15,14 @@ const (
 	symlink
 )
 
+type InputError struct {
+	msg string
+}
+
+func (e *InputError) Error() string {
+	return fmt.Sprintf("input error - %s", e.msg)
+}
+
 // IsValid returns an error if the path doesn't exist, or it is not a directory
 func IsValid(path string) error {
 	sourceInfo, err := os.Stat(path)
@@ -22,7 +30,7 @@ func IsValid(path string) error {
 		return fmt.Errorf("%s is not a valid directory: %w", path, err)
 	}
 	if !sourceInfo.IsDir() {
-		return fmt.Errorf("%s is not a directory", path)
+		return &InputError{msg: fmt.Sprintf("%s is not a directory:", path)}
 	}
 
 	return nil

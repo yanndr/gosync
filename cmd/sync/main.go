@@ -1,11 +1,11 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"gosync/pkg/directory"
 	"os"
-	"time"
 )
 
 var Version = "0.1.dev"
@@ -29,17 +29,24 @@ func main() {
 		os.Exit(-1)
 	}
 
-	now := time.Now()
-
-	defer func() {
-		fmt.Println(time.Since(now))
-	}()
-
 	ds := directory.NewSynchronizer(source, destination, directory.MaxGoroutine(40))
 
 	err := ds.Sync()
 	if err != nil {
+
+		var cpErr *directory.CopyError
+		if errors.As(err, &cpErr) {
+			fmt.Printf("Process ended with errors:\n%s\n", cpErr.Error())
+			os.Exit(1)
+		}
+
 		fmt.Println(err)
-		os.Exit(-1)
+
+		var inputErr *directory.InputError
+		if errors.As(err, &inputErr) {
+			os.Exit(2)
+		}
+
+		os.Exit(255)
 	}
 }

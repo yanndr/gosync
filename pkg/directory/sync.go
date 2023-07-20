@@ -3,11 +3,19 @@ package directory
 import (
 	"fmt"
 	syncFile "gosync/pkg/file"
-	"log"
 	"os"
 	"path"
+	"strings"
 	"sync"
 )
+
+type CopyError struct {
+	errors []string
+}
+
+func (e *CopyError) Error() string {
+	return strings.Join(e.errors, "\n")
+}
 
 type fileSync struct {
 	source, destination string
@@ -55,11 +63,10 @@ func (s *synchronizer) Sync() error {
 
 	doneC, errorC := s.copyListener(s.maxGoroutine)
 
-	errorOccurred := false
+	errs := make([]string, 0)
 	go func() {
 		for err := range errorC {
-			errorOccurred = true
-			log.Println(err)
+			errs = append(errs, err.Error())
 		}
 	}()
 
@@ -70,8 +77,8 @@ func (s *synchronizer) Sync() error {
 	close(s.copyC)
 	<-doneC
 
-	if errorOccurred {
-		return fmt.Errorf("process ended with copy errors")
+	if len(errs) > 0 {
+		return &CopyError{errors: errs}
 	}
 	return nil
 }
