@@ -7,11 +7,12 @@ import (
 	"os"
 )
 
-type EntryType bool
+type EntryType int
 
 const (
-	folder = EntryType(true)
-	file   = EntryType(false)
+	folder = EntryType(iota)
+	file
+	symlink
 )
 
 // IsValid returns an error if the path doesn't exist, or it is not a directory
@@ -50,8 +51,19 @@ func ListEntries(folderPath string) (map[string]EntryType, error) {
 		}
 	} else {
 		for _, entry := range destEntries {
-			existingEntries[entry.Name()] = EntryType(entry.IsDir())
+			existingEntries[entry.Name()] = getEntryType(entry.Type())
 		}
 	}
 	return existingEntries, nil
+}
+
+func getEntryType(fileMode os.FileMode) EntryType {
+	switch fileMode {
+	case os.ModeDir:
+		return folder
+	case os.ModeSymlink:
+		return symlink
+	default:
+		return file
+	}
 }

@@ -11,7 +11,7 @@ import (
 
 type fileSync struct {
 	source, destination string
-	fileMode            os.FileMode
+	fileType            EntryType
 }
 
 // Synchronizer is a directory synchronizer between a source and a destination folder.
@@ -91,7 +91,7 @@ func (s *synchronizer) copyListener(maxGoroutine int) (<-chan interface{}, <-cha
 					wg.Done()
 					<-semaphore
 				}()
-				err := s.fileCopier.Copy(fi.source, fi.destination)
+				err := s.fileCopier.Copy(fi.source, fi.destination, fi.fileType == symlink)
 				if err != nil {
 					errorC <- err
 				}
@@ -130,32 +130,33 @@ func (s *synchronizer) synchronizeFolder() error {
 			return fmt.Errorf("cannot read directory %s: %w", folders.source, err)
 		}
 		for _, entry := range entries {
-			isDir, exists := existingEntries[entry.Name()]
+			destEntryType, exists := existingEntries[entry.Name()]
+			sourceEntryType := getEntryType(entry.Type())
+
+			source := path.Join(folders.source, entry.Name())
+			destination := path.Join(folders.destination, entry.Name())
 
 			if !exists {
-				if entry.IsDir() {
-					folderQueue = append(folderQueue, syncFolders{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())})
-				} else {
-					s.copyC <- fileSync{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())}
+				if sourceEntryType == file || sourceEntryType == symlink {
+					s.copyC <- fileSync{source: source, destination: destination, fileType: sourceEntryType}
 				}
-				continue
-			}
+			} else {
+				if destEntryType != sourceEntryType {
+					err = os.RemoveAll(destination)
+					if err != nil {
+						return fmt.Errorf("cannot delete entry %s: %w", entry.Name(), err)
+					}
 
-			if isDir != EntryType(entry.IsDir()) {
-				err = os.RemoveAll(path.Join(folders.destination, entry.Name()))
-				if err != nil {
-					return fmt.Errorf("cannot delete entry %s: %w", entry.Name(), err)
+					if sourceEntryType == file || sourceEntryType == symlink {
+						s.copyC <- fileSync{source: source, destination: destination, fileType: sourceEntryType}
+					}
 				}
+				delete(existingEntries, entry.Name())
 			}
 
-			if entry.IsDir() {
-				folderQueue = append(folderQueue, syncFolders{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())})
-			} else if isDir != EntryType(entry.IsDir()) {
-				s.copyC <- fileSync{source: path.Join(folders.source, entry.Name()), destination: path.Join(folders.destination, entry.Name())}
+			if sourceEntryType == folder {
+				folderQueue = append(folderQueue, syncFolders{source: source, destination: destination})
 			}
-
-			delete(existingEntries, entry.Name())
-
 		}
 		for name := range existingEntries {
 			err = os.RemoveAll(path.Join(folders.destination, name))

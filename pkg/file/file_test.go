@@ -35,7 +35,7 @@ func TestBasicCopy_Copy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ba := BasicCopy{}
-			err := ba.Copy(tt.args.sourceFile, tt.args.destinationFile)
+			err := ba.Copy(tt.args.sourceFile, tt.args.destinationFile, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Copy() error = %v, wantErr %v", err, tt.wantErr)
 			}

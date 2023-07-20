@@ -10,7 +10,7 @@ type fakeCopier struct {
 	mu         sync.Mutex
 }
 
-func (c *fakeCopier) Copy(source, destination string) error {
+func (c *fakeCopier) Copy(source, destination string, symlink bool) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.fileCopied++

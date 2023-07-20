@@ -9,12 +9,16 @@ import (
 
 type Copier interface {
 	//Copy a sourceFile to the destinationFile, if the parent folder doesn't exist it will be created
-	Copy(sourceFile, destinationFile string) error
+	Copy(sourceFile, destinationFile string, symlink bool) error
 }
 
 type BasicCopy struct{}
 
-func (*BasicCopy) Copy(sourceFile, destinationFile string) error {
+func (*BasicCopy) Copy(sourceFile, destinationFile string, symlink bool) error {
+	if symlink {
+		return copySymLink(sourceFile, destinationFile)
+	}
+
 	source, err := os.Open(sourceFile)
 	if err != nil {
 		return fmt.Errorf("cannot open Source file %s: %w", sourceFile, err)
@@ -57,4 +61,12 @@ func (*BasicCopy) Copy(sourceFile, destinationFile string) error {
 		}
 	}
 	return nil
+}
+
+func copySymLink(source, dest string) error {
+	link, err := os.Readlink(source)
+	if err != nil {
+		return err
+	}
+	return os.Symlink(link, dest)
 }
