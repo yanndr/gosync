@@ -10,7 +10,7 @@ import (
 const bufferSize = 4096
 
 type Copier interface {
-	//Copy a sourceFile to the destinationFile, if the parent folder doesn't exist it will be created.
+	//Copy copies a sourceFile to the destinationFile. If the parent folder doesn't exist it will be created.
 	Copy(sourceFile, destinationFile string, symlink bool) error
 }
 
@@ -23,7 +23,7 @@ func (*BasicCopy) Copy(sourceFile, destinationFile string, symlink bool) error {
 
 	source, err := os.Open(sourceFile)
 	if err != nil {
-		return fmt.Errorf("cannot open Source file %s: %w", sourceFile, err)
+		return fmt.Errorf("cannot open source file %s: %w", sourceFile, err)
 	}
 	defer source.Close()
 
@@ -38,13 +38,13 @@ func (*BasicCopy) Copy(sourceFile, destinationFile string, symlink bool) error {
 				return fmt.Errorf("error creating directory %s: %w", destinationDir, err)
 			}
 		} else {
-			return fmt.Errorf("error getting stat for directory %s: %w", destinationDir, err)
+			return fmt.Errorf("error getting stats for directory %s: %w", destinationDir, err)
 		}
 	}
 
 	destination, err := os.Create(destinationFile)
 	if err != nil {
-		return fmt.Errorf("cannot create Destination file %s: %w", destinationFile, err)
+		return fmt.Errorf("cannot create destination file %s: %w", destinationFile, err)
 	}
 
 	defer destination.Close()
@@ -53,7 +53,7 @@ func (*BasicCopy) Copy(sourceFile, destinationFile string, symlink bool) error {
 	for {
 		n, err := source.Read(buf)
 		if err != nil && err != io.EOF {
-			return fmt.Errorf("cannot read from  buffer for file %s: %w", sourceFile, err)
+			return fmt.Errorf("cannot read from buffer for file %s: %w", sourceFile, err)
 		}
 		if n == 0 {
 			break

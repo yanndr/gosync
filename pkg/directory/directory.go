@@ -23,7 +23,7 @@ func (e *InputError) Error() string {
 	return fmt.Sprintf("input error - %s", e.msg)
 }
 
-// IsValid returns an error if the path doesn't exist, or it is not a directory
+// IsValid returns an error if the path doesn't exist, or if it is not a directory
 func IsValid(path string) error {
 	sourceInfo, err := os.Stat(path)
 	if err != nil {
@@ -37,7 +37,7 @@ func IsValid(path string) error {
 }
 
 type dirEntryLister interface {
-	// ListEntries list all the entries in the folderPath and returns a map[string]entryType of the entries
+	// listEntries lists all the entries in the folderPath and returns a map[string]entryType of the entries.
 	listEntries(folderPath string) (map[string]entryType, error)
 }
 
@@ -48,7 +48,7 @@ func (basicDirEntryLister) listEntries(folderPath string) (map[string]entryType,
 	return ListEntries(folderPath)
 }
 
-// ListEntries list all the entries in the folderPath and returns a map[string]entryType of the entries
+// ListEntries lists all the entries in the folderPath and returns a map[string]entryType of the entries.
 func ListEntries(folderPath string) (map[string]entryType, error) {
 	existingEntries := make(map[string]entryType)
 	destEntries, err := os.ReadDir(folderPath)

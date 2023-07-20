@@ -17,7 +17,7 @@ func (e *CopyError) Error() string {
 	return strings.Join(e.errors, "\n")
 }
 
-// fileSync is a pair of path of file or symlink to synchronize.
+// fileSync is a pair of file paths or symlink paths to synchronize.
 type fileSync struct {
 	source, destination string
 	fileType            entryType
@@ -25,7 +25,7 @@ type fileSync struct {
 
 // Synchronizer is a directory synchronizer between a source and a destination folder.
 type Synchronizer interface {
-	//Sync launch the syncing operation between the two folders
+	//Sync launches the syncing operation between the two folders.
 	Sync() error
 }
 
@@ -38,7 +38,7 @@ type synchronizer struct {
 	entryLister         dirEntryLister
 }
 
-// NewSynchronizer initialize a directory synchronizer.
+// NewSynchronizer initializes a directory synchronizer.
 func NewSynchronizer(source, destination string, opts ...SynchronizerOption) Synchronizer {
 	s := defaultSynchronizer
 	if opts != nil {

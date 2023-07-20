@@ -33,7 +33,7 @@ func newFuncSynchronizerOption(f func(*synchronizer)) *funcSynchronizerOption {
 	}
 }
 
-// MaxGoroutine lets you set the maximum goroutine that are allow for copying files.
+// MaxGoroutine lets you set the maximum number of goroutines that are allowed for copying files.
 func MaxGoroutine(m int) SynchronizerOption {
 	return newFuncSynchronizerOption(func(s *synchronizer) {
 		if m > 0 {

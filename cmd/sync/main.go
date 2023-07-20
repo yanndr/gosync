@@ -17,7 +17,7 @@ func main() {
 	flag.StringVar(&destination, "d", "", "The destination folder to synchronize")
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Sync v%s is a CLI to synchronize two folders", Version)
+		fmt.Fprintf(flag.CommandLine.Output(), `Sync v%s that synchronizes two directories: a source directory and a destination directory.`, Version)
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 	}
