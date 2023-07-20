@@ -48,10 +48,10 @@ func Test_synchronizer_Sync(t *testing.T) {
 }
 
 type fakeEntryLister struct {
-	result map[string]EntryType
+	result map[string]entryType
 }
 
-func (el *fakeEntryLister) listEntries(folder string) (map[string]EntryType, error) {
+func (el *fakeEntryLister) listEntries(folder string) (map[string]entryType, error) {
 	return el.result, nil
 }
 
@@ -62,7 +62,7 @@ func Test_synchronizer_Sync_withExistingFiles(t *testing.T) {
 	type fields struct {
 		Source      string
 		Destination string
-		files       map[string]EntryType
+		files       map[string]entryType
 	}
 	tests := []struct {
 		name           string
@@ -70,8 +70,8 @@ func Test_synchronizer_Sync_withExistingFiles(t *testing.T) {
 		wantFileCopied int
 		wantErr        bool
 	}{
-		{"one file already on dest", fields{"../../tests/source_folder_a", "a", map[string]EntryType{"file_a": file}}, 2, false},
-		{"all files already on dest", fields{"../../tests/source_folder_a", "a", map[string]EntryType{"file_a": file, "file_b": file, "file_c": file}}, 0, false},
+		{"one file already on dest", fields{"../../tests/source_folder_a", "a", map[string]entryType{"file_a": file}}, 2, false},
+		{"all files already on dest", fields{"../../tests/source_folder_a", "a", map[string]entryType{"file_a": file, "file_b": file, "file_c": file}}, 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

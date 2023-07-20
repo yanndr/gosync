@@ -2,21 +2,20 @@
 
 ## Description
 Sync is a CLI to synchronize to directories, source and destination.
-If the destination folder doens't exist it will be created unless the source folder is empty
+If the destination folder doesn't exist it will be created unless the source folder is empty.
 ## Build
 
-if you have make install :
+If you have make installed:
 ```shell
 make build
 ```
-that will build the binary in the root directory
+that will build the binary in the root directory.
 
-if you don't have make:
+If you don't have make:
 ```shell
 cd cmd/sync
 go build
 ```
-
 that will build the binary in cmd/sync
 
 ## Run

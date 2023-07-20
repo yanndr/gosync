@@ -7,10 +7,10 @@ import (
 	"os"
 )
 
-type EntryType int
+type entryType int
 
 const (
-	folder = EntryType(iota)
+	folder = entryType(iota)
 	file
 	symlink
 )
@@ -37,20 +37,20 @@ func IsValid(path string) error {
 }
 
 type dirEntryLister interface {
-	// ListEntries list all the entries in the folderPath and returns a map[string]EntryType of the entries
-	listEntries(folderPath string) (map[string]EntryType, error)
+	// ListEntries list all the entries in the folderPath and returns a map[string]entryType of the entries
+	listEntries(folderPath string) (map[string]entryType, error)
 }
 
 type basicDirEntryLister struct {
 }
 
-func (basicDirEntryLister) listEntries(folderPath string) (map[string]EntryType, error) {
+func (basicDirEntryLister) listEntries(folderPath string) (map[string]entryType, error) {
 	return ListEntries(folderPath)
 }
 
-// ListEntries list all the entries in the folderPath and returns a map[string]EntryType of the entries
-func ListEntries(folderPath string) (map[string]EntryType, error) {
-	existingEntries := make(map[string]EntryType)
+// ListEntries list all the entries in the folderPath and returns a map[string]entryType of the entries
+func ListEntries(folderPath string) (map[string]entryType, error) {
+	existingEntries := make(map[string]entryType)
 	destEntries, err := os.ReadDir(folderPath)
 	if err != nil {
 		var pathErr *fs.PathError
@@ -65,7 +65,7 @@ func ListEntries(folderPath string) (map[string]EntryType, error) {
 	return existingEntries, nil
 }
 
-func getEntryType(fileMode os.FileMode) EntryType {
+func getEntryType(fileMode os.FileMode) entryType {
 	switch fileMode {
 	case os.ModeDir:
 		return folder

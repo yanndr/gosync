@@ -13,8 +13,8 @@ var Version = "0.1.dev"
 func main() {
 	var source, destination string
 
-	flag.StringVar(&source, "s", "", "The source folder to synchronizeFolder")
-	flag.StringVar(&destination, "d", "", "The destination folder to synchronizeFolder")
+	flag.StringVar(&source, "s", "", "The source folder to synchronize")
+	flag.StringVar(&destination, "d", "", "The destination folder to synchronize")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Sync v%s is a CLI to synchronize two folders", Version)

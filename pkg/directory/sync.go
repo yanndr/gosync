@@ -17,9 +17,10 @@ func (e *CopyError) Error() string {
 	return strings.Join(e.errors, "\n")
 }
 
+// fileSync is a pair of path of file or symlink to synchronize.
 type fileSync struct {
 	source, destination string
-	fileType            EntryType
+	fileType            entryType
 }
 
 // Synchronizer is a directory synchronizer between a source and a destination folder.
@@ -37,7 +38,7 @@ type synchronizer struct {
 	entryLister         dirEntryLister
 }
 
-// NewSynchronizer initialize a directory synchronizer
+// NewSynchronizer initialize a directory synchronizer.
 func NewSynchronizer(source, destination string, opts ...SynchronizerOption) Synchronizer {
 	s := defaultSynchronizer
 	if opts != nil {
@@ -58,7 +59,7 @@ func (s *synchronizer) Sync() error {
 	}
 
 	if s.Source == s.Destination {
-		return fmt.Errorf("error Source and Destination are the same directory")
+		return &InputError{msg: "error: Source and Destination are the same directory"}
 	}
 
 	doneC, errorC := s.copyListener(s.maxGoroutine)

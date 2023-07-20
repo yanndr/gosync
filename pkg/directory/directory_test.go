@@ -42,12 +42,12 @@ func TestListExistingEntries(t *testing.T) {
 	tests := []struct {
 		name       string
 		folderPath string
-		want       map[string]EntryType
+		want       map[string]entryType
 		wantErr    bool
 	}{
-		{"Empty path", "", map[string]EntryType{}, false},
-		{"folder a path", "../../tests/source_folder_a", map[string]EntryType{"file_a": file, "file_b": file, "file_c": file}, false},
-		{"folder c path", "../../tests/source_folder_c", map[string]EntryType{"dir_a": folder, "file_a": file, "file_d": file, "file_e": file}, false},
+		{"Empty path", "", map[string]entryType{}, false},
+		{"folder a path", "../../tests/source_folder_a", map[string]entryType{"file_a": file, "file_b": file, "file_c": file}, false},
+		{"folder c path", "../../tests/source_folder_c", map[string]entryType{"dir_a": folder, "file_a": file, "file_d": file, "file_e": file}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

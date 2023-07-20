@@ -7,7 +7,7 @@ const (
 	defaultCopyBufferSize = 20
 )
 
-// SynchronizerOption sets options such as fileCopier, MaxGoroutine and CopyBufferSize
+// SynchronizerOption sets options such as  MaxGoroutine and CopyBufferSize
 type SynchronizerOption interface {
 	apply(option *synchronizer)
 }
